@@ -206,15 +206,12 @@ public SQL_Callback(Handle:owner, Handle:hndl, const String:error[], any:client)
 				if(g_iServiceId[i] == iService)
 				{
 					if(g_iLoggin & LOGRIGHTS)
-						LogToFileEx(sLog, "У игрока %N обнаружена услуга: %s%s%s%s",
-												client,  g_iServiceName[i],
-												
-												bFlagsOverride ? ". Обнаружено изменение флагов на ": "", tFlags,
-												
-												iAuthStatus == -1 ? ", но пароль введен не верно" :
-													(g_iLoggin & LOGPW && iAuthStatus == 1) ? ", пароль введен верно" :
-													(g_iLoggin & LOGPW && iAuthStatus == 0) ? ", пароль не требуеться" :
-													"");
+						LogToFileEx(sLog, "У игрока %N обнаружена услуга: %s%s%s%s", client,  g_iServiceName[i],
+						bFlagsOverride ? ". Обнаружено изменение флагов на ": "", tFlags,
+						iAuthStatus == -1 ? ", но пароль введен не верно" :
+							(g_iLoggin & LOGPW && iAuthStatus == 1) ? ", пароль введен верно" :
+							(g_iLoggin & LOGPW && iAuthStatus == 0) ? ", пароль не требуеться" :
+							"");
 					if(iAuthStatus != -1)
 					{
 						if(iImmunity < g_iServiceImmunity[i])
