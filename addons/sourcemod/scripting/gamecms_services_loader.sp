@@ -31,7 +31,7 @@ public Plugin:myinfo =
 	name = "GameCMS Admin Loader",
 	author = "Danyas",
 	description = "Loading admins and services from GameCMS database",
-	version = "1.4",
+	version = "1.5",
 	url = "https://vk.com/id36639907"
 }
 
@@ -181,10 +181,16 @@ public SQL_Callback(Handle:owner, Handle:hndl, const String:error[], any:client)
 				decl String: sPassword[32]; sPassword[0] = '\0';
 				iAuthStatus = -1;
 				
-				if(GetClientInfo(client, sInfoVar, sPassword, sizeof(sPassword)) && sPassword[0] != 0 && StrEqual(sPassword, sPasswordDB))
+				if(GetClientInfo(client, sInfoVar, sPassword, sizeof(sPassword)))
 				{
-					iAuthStatus = 1;
+					if(sPassword[0] != 0 && StrEqual(sPassword, sPasswordDB))
+					{
+						iAuthStatus = 1;
+					}
 				}
+				else LogToFileEx(sLog, "GetClientInfo \"%N\" Failed", client);
+				
+				if(iAuthStatus == -1) LogToFileEx(sLog, "Пароль \"%s\" неверен, правильный пароль \"%s\"", sPassword, sPasswordDB);
 			}
 			
 			decl String:tFlags[AdminFlags_TOTAL + 1]; tFlags[0] = '\0';
@@ -206,12 +212,15 @@ public SQL_Callback(Handle:owner, Handle:hndl, const String:error[], any:client)
 				if(g_iServiceId[i] == iService)
 				{
 					if(g_iLoggin & LOGRIGHTS)
-						LogToFileEx(sLog, "У игрока %N обнаружена услуга: %s%s%s%s", client,  g_iServiceName[i],
-						bFlagsOverride ? ". Обнаружено изменение флагов на ": "", tFlags,
-						iAuthStatus == -1 ? ", но пароль введен не верно" :
-							(g_iLoggin & LOGPW && iAuthStatus == 1) ? ", пароль введен верно" :
-							(g_iLoggin & LOGPW && iAuthStatus == 0) ? ", пароль не требуеться" :
-							"");
+						LogToFileEx(sLog, "У игрока %N обнаружена услуга: %s%s%s%s",
+												client,  g_iServiceName[i],
+												
+												bFlagsOverride ? ". Обнаружено изменение флагов на ": "", tFlags,
+												
+												iAuthStatus == -1 ? ", но пароль введен не верно" :
+													(g_iLoggin & LOGPW && iAuthStatus == 1) ? ", пароль введен верно" :
+													(g_iLoggin & LOGPW && iAuthStatus == 0) ? ", пароль не требуеться" :
+													"");
 					if(iAuthStatus != -1)
 					{
 						if(iImmunity < g_iServiceImmunity[i])
@@ -262,7 +271,7 @@ public SQL_Callback(Handle:owner, Handle:hndl, const String:error[], any:client)
 					}
 				}
 			}
-		}	
+		}
 		
 		if(g_iLoggin & LOGRIGHTS)
 		{
@@ -276,6 +285,16 @@ public SQL_Callback(Handle:owner, Handle:hndl, const String:error[], any:client)
 				LogToFileEx(sLog, "Игроку %N установлен иммунитет: %i", client, iImmunity);
 			}
 		}
+	}
+}
+
+public OnRebuildAdminCache(AdminCachePart:part)
+{
+	if(part != AdminCache_Admins) return;
+	
+	for (new i = 1; i <= MaxClients; ++i)
+	{
+		if (IsClientInGame(i)) OnClientPostAdminCheck(i);
 	}
 }
 
