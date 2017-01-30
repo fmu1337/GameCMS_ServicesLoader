@@ -1,0 +1,30 @@
+# Use the new container-based infrastructure
+sudo: false
+
+# Install some apt packages needed for spcomp
+addons:
+    apt_packages:
+        - lib32stdc++6
+
+# Set the build environment
+env:
+    - SMVERSION=1.6 # v34
+    - SMVERSION=1.7 # Legacy
+    - SMVERSION=1.8 # Stable
+    - SMVERSION=1.9 # Unstable
+
+install:
+    - wget --input-file=http://sourcemod.net/smdrop/$SMVERSION/sourcemod-latest-linux
+    - tar -xzf $(cat sourcemod-latest-linux)
+	
+before_script:
+    - cd addons/sourcemod/scripting/
+    - chmod +x spcomp
+	
+script: ./compile.sh
+
+after_success:
+  - mv *.smx ../plugins
+  
+notifications:
+    email: false
