@@ -2,6 +2,9 @@ language: c
 
 env:
     - SMVERSION=1.6
+    - SMVERSION=1.7
+    - SMVERSION=1.8
+    - SMVERSION=1.9
 
 matrix:
     fast_finish: true
@@ -9,21 +12,21 @@ matrix:
 before_install:
     - sudo apt-get update
     - sudo apt-get install gcc-multilib
-    - sudo apt-get install lynx
     - sudo apt-get install lib32stdc++6
 
 before_script:
-    - SMPATTERN="http:.*sourcemod-.*-linux.*"
-    - SMURL="http://www.sourcemod.net/smdrop/$SMVERSION/"
-    - SMPACKAGE=`lynx -dump "$SMURL" | egrep -o "$SMPATTERN" | tail -1`
-    - wget $SMPACKAGE
-    - tar -xzf $(basename "$SMPACKAGE")
+    - 'if [ $SMVERSION = "1.6" ]; then
+          wget -q http://www.sourcemod.net/smdrop/1.6/sourcemod-1.6.4-git4624-linux.tar.gz" -O sourcemod.tar.gz;
+      else
+          wget -q "http://www.sourcemod.net/latest.php?version=$SMVERSION&os=linux" -O sourcemod.tar.gz;
+      fi'
+    - tar -xzf sourcemod.tar.gz
     - cd addons/sourcemod/scripting/
     - chmod +x spcomp
     - chmod +x compile.sh
 
 script: 
-    - ./compile.sh
+    - ./compile.sh gamecms_services_loader.sp
 
 after_script:
     - ls ../plugin

@@ -1,8 +1,6 @@
 
 #include <sourcemod>
 
-#define MAXSERVICES 32 // must to switch into ADT Array later
-
 #define DB_PASS		0
 #define USER_PASS	1
 
@@ -13,18 +11,17 @@
 #define LOGPW		16
 
 static const String: sLog[] = "addons/sourcemod/logs/gamecms_admin_loader.log";
-new 		g_iLoggin;
 
-new Handle:	hDatabase;
-
-new 		g_iServiceId[MAXSERVICES];
-new String:	g_iServiceName[MAXSERVICES][64];
-new 		g_iServiceFlags[MAXSERVICES];
-new 		g_iServiceImmunity[MAXSERVICES];
-new			g_iLoadedServices;
-
-new			g_iServerId	= -1;
-new String:	g_sInfoVar[32] = "_pw", Handle: hCvarForceId;
+new		g_iLoggin,
+		g_iLoadedServices,
+		g_iServerId	= -1,
+String:	g_sInfoVar[32] = "_pw",		
+Handle:	g_hDatabase,
+Handle:	g_hArrayServiceId,
+Handle:	g_hArrayServiceName,
+Handle:	g_hArrayServiceFlags,
+Handle:	g_hArrayServiceImmunity,
+Handle: hCvarForceId;
 
 
 public Plugin:myinfo = 
@@ -32,7 +29,7 @@ public Plugin:myinfo =
 	name = "GameCMS Admin Loader",
 	author = "Danyas",
 	description = "Loading admins and services from GameCMS database",
-	version = "1.6.b31",
+	version = "1.6.b36",
 	url = "https://vk.com/id36639907"
 }
 
@@ -56,6 +53,11 @@ public OnPluginStart()
 	
 	g_iLoggin = GetConVarInt(hCvarLog);
 	
+	g_hArrayServiceId = CreateArray();
+	g_hArrayServiceName = CreateArray(64);
+	g_hArrayServiceFlags = CreateArray();
+	g_hArrayServiceImmunity = CreateArray();
+
 	SQL_TConnect(SQL_LoadServer, "gamecms");
 }
 
@@ -68,7 +70,7 @@ public SQL_LoadServer(Handle:owner, Handle:hndl, const String:error[], any:data)
 		return;
 	}
 
-	hDatabase = hndl;
+	g_hDatabase = hndl;
 	decl String:query[192]; query[0] = '\0';
 	
 	new iVar = GetConVarInt(hCvarForceId);
@@ -88,7 +90,7 @@ public SQL_LoadServer(Handle:owner, Handle:hndl, const String:error[], any:data)
 		if(g_iLoggin & LOGDB) LogToFileEx(sLog, "SQL_LoadServer: \"%s\"", query);
 	}
 	
-	SQL_TQuery(hDatabase, SQL_CheckServer, query);
+	SQL_TQuery(g_hDatabase, SQL_CheckServer, query);
 }
 
 
@@ -108,9 +110,8 @@ public SQL_CheckServer(Handle:owner, Handle:hndl, const String:error[], any:data
 		FormatEx(query, sizeof(query), "SELECT `id`, `name`, `rights`, `immunity` FROM `services` WHERE `server` = '%i'", g_iServerId);
 		
 		if(g_iLoggin & LOGDB) LogToFileEx(sLog, "SQL_GetServices: \"%s\"", query);
-		SQL_TQuery(hDatabase, SQL_GetServices, query);
+		SQL_TQuery(g_hDatabase, SQL_GetServices, query);
 	}
-	
 	else
 	{
 		if(g_iServerId == -1)
@@ -135,33 +136,35 @@ public SQL_GetServices(Handle:owner, Handle:hndl, const String:error[], any:data
 		if(g_iLoggin & LOGSERVICES)  LogToFileEx(sLog, "|#    |        Флаги          | Иммунитет | Название услуги");
 		while (SQL_FetchRow(hndl))
 		{
-			decl String:buff[AdminFlags_TOTAL + 1];
+			decl String:sFlags[AdminFlags_TOTAL + 1], String: sServiceName[64];
 			
-			g_iServiceId[g_iLoadedServices] = SQL_FetchInt(hndl, 0);
-			SQL_FetchString(hndl, 1, g_iServiceName[g_iLoadedServices], sizeof(g_iServiceName[]));
-			SQL_FetchString(hndl, 2, buff, sizeof(buff));
+			PushArrayCell(g_hArrayServiceId, SQL_FetchInt(hndl, 0));
 			
+			SQL_FetchString(hndl, 1, sServiceName, sizeof(sServiceName));	
+			SQL_FetchString(hndl, 2, sFlags, sizeof(sFlags));
 			
-			new len = strlen(buff);
-			new AdminFlag:flag;
+			PushArrayString(g_hArrayServiceName, sServiceName);
 			
-			for (new i = 0; i < len; i++)
+			new AdminFlag:flag, flagbits;
+			
+			for (new i = 0; i < strlen(sFlags); i++)
 			{
-				if (!FindFlagByChar(buff[i], flag))
+				if (!FindFlagByChar(sFlags[i], flag))
 				{
-					LogToFileEx(sLog, "Найден неверный флаг: %c", buff[i]);
+					LogToFileEx(sLog, "Найден неверный флаг: %c", sFlags[i]);
 				}
 				else
 				{
-					g_iServiceFlags[g_iLoadedServices] |= FlagToBit(flag);
+					flagbits |= FlagToBit(flag);
 				}
 			}
 			
-			g_iServiceImmunity[g_iLoadedServices] = SQL_FetchInt(hndl, 3);
+			PushArrayCell(g_hArrayServiceFlags, flagbits);
+			PushArrayCell(g_hArrayServiceImmunity, SQL_FetchInt(hndl, 3));
 			
 			if(g_iLoggin & LOGSERVICES)
 				LogToFileEx(sLog, "|#%4d| %21s | %9i | %s",
-					g_iLoadedServices + 1, buff, g_iServiceImmunity[g_iLoadedServices], g_iServiceName[g_iLoadedServices]);
+					g_iLoadedServices + 1, sFlags, GetArrayCell(g_hArrayServiceImmunity, g_iLoadedServices), sServiceName);
 			
 			g_iLoadedServices++;
 		}
@@ -185,7 +188,7 @@ public OnClientPostAdminCheck(client)
 	if(g_iLoggin & LOGCONNECTS) LogToFileEx(sLog, "Игрок %N (%s) подключен.", client, steamid);	
 	FormatEx(query, 350, "SELECT `admins_services`.`service`, `admins_services`.`rights_und`, `admins`.`pass` FROM `admins_services`, `admins` WHERE `admins`.`id`=`admins_services`.`admin_id` AND `admins`.`name`='%s' AND (`admins_services`.`ending_date`>CURRENT_TIMESTAMP OR`admins_services`.`ending_date`='0000-00-0000:00:00')", steamid);
 	if(g_iLoggin & LOGDB) LogToFileEx(sLog, "OnClientPostAdminCheck: \"%s\"", query);
-	SQL_TQuery(hDatabase, SQL_Callback, query, client)
+	SQL_TQuery(g_hDatabase, SQL_Callback, query, client)
 }
 
 public SQL_Callback(Handle:owner, Handle:hndl, const String:error[], any:client)
@@ -237,13 +240,19 @@ public SQL_Callback(Handle:owner, Handle:hndl, const String:error[], any:client)
 			
 			for(new i; i < g_iLoadedServices; i++)
 			{
-				if(g_iServiceId[i] == iService)
+				if(GetArrayCell(g_hArrayServiceId, i) == iService)
 				{
-					if(g_iLoggin & LOGRIGHTS) LogToFileEx(sLog, "У игрока %N обнаружена услуга: %s%s%s%s", client,  g_iServiceName[i], bFlagsOverride ? ". Обнаружено изменение флагов на ": "", tFlags,	iAuthStatus == -1 ? ", но пароль введен не верно" : (g_iLoggin & LOGPW && iAuthStatus == 1) ? ", пароль введен верно" : (g_iLoggin & LOGPW && iAuthStatus == 0) ? ", пароль не требуеться" : "");
+					if(g_iLoggin & LOGRIGHTS)
+					{
+						decl String: sServiceName[64]; sServiceName[0] = '\0';
+						GetArrayString(g_hArrayServiceName, i, sServiceName, sizeof(sServiceName));
+						LogToFileEx(sLog, "У игрока %N обнаружена услуга: %s%s%s%s", client,  sServiceName, bFlagsOverride ? ". Обнаружено изменение флагов на ": "", tFlags,	iAuthStatus == -1 ? ", но пароль введен не верно" : (g_iLoggin & LOGPW && iAuthStatus == 1) ? ", пароль введен верно" : (g_iLoggin & LOGPW && iAuthStatus == 0) ? ", пароль не требуеться" : "");
+					}
 					
 					if(iAuthStatus != -1)
 					{
-						if(MaxImmunity < g_iServiceImmunity[i]) MaxImmunity = g_iServiceImmunity[i];
+						new iServiceImmunity = GetArrayCell(g_hArrayServiceImmunity, i);
+						if(MaxImmunity < iServiceImmunity) MaxImmunity = iServiceImmunity;
 						
 						if(bFlagsOverride)
 						{
@@ -262,7 +271,8 @@ public SQL_Callback(Handle:owner, Handle:hndl, const String:error[], any:client)
 						else
 						{
 							new AdminFlag:flags[AdminFlags_TOTAL];
-							new num_flags = FlagBitsToArray(g_iServiceFlags[i], flags, sizeof(flags));
+							
+							new num_flags = FlagBitsToArray(GetArrayCell(g_hArrayServiceFlags, i), flags, sizeof(flags));
 							
 							for (new x = 0; x < num_flags; x++)
 							{
@@ -304,6 +314,5 @@ public OnRebuildAdminCache(AdminCachePart:part)
 		if (IsClientInGame(i)) OnClientPostAdminCheck(i);
 	}
 }
-
 
 public UpdateCvar_log(Handle:c, const String:ov[], const String:nv[])	g_iLoggin = StringToInt(nv);
