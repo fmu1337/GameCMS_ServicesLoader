@@ -29,7 +29,7 @@ public Plugin:myinfo =
 	name = "GameCMS Admin Loader",
 	author = "Danyas",
 	description = "Loading admins and services from GameCMS database",
-	version = "1.6.b36",
+	version = "1.6.b37",
 	url = "https://vk.com/id36639907"
 }
 
@@ -183,10 +183,10 @@ public SQL_GetServices(Handle:owner, Handle:hndl, const String:error[], any:data
 public OnClientPostAdminCheck(client)
 {
 	if(IsFakeClient(client)) return;
-	decl String: steamid[21], String:query[350];
-	GetClientAuthId(client, AuthId_Engine, steamid, 21);
-	if(g_iLoggin & LOGCONNECTS) LogToFileEx(sLog, "Игрок %N (%s) подключен.", client, steamid);	
-	FormatEx(query, 350, "SELECT `admins_services`.`service`, `admins_services`.`rights_und`, `admins`.`pass` FROM `admins_services`, `admins` WHERE `admins`.`id`=`admins_services`.`admin_id` AND `admins`.`name`='%s' AND (`admins_services`.`ending_date`>CURRENT_TIMESTAMP OR`admins_services`.`ending_date`='0000-00-0000:00:00')", steamid);
+	decl String: sSteamId[21], String:query[350];
+	GetClientAuthId(client, AuthId_Engine, sSteamId, sizeof(sSteamId));
+	FormatEx(query, 350, "SELECT `admins_services`.`service`, `admins_services`.`rights_und`, `admins`.`pass` FROM `admins_services`, `admins` WHERE `admins`.`id`=`admins_services`.`admin_id` AND `admins`.`name`='%s' AND `admins`.`server`='%i' AND (`admins_services`.`ending_date`>CURRENT_TIMESTAMP OR`admins_services`.`ending_date`='0000-00-0000:00:00')", sSteamId, g_iServerId);
+	if(g_iLoggin & LOGCONNECTS) LogToFileEx(sLog, "Игрок %N (%s) подключен.", client, sSteamId);	
 	if(g_iLoggin & LOGDB) LogToFileEx(sLog, "OnClientPostAdminCheck: \"%s\"", query);
 	SQL_TQuery(g_hDatabase, SQL_Callback, query, client)
 }
