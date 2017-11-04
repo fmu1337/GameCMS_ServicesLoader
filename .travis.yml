@@ -20,7 +20,7 @@ before_install:
 
 before_script:
     - 'if [ $SMVERSION = "1.6" ]; then
-          wget -q "http://www.sourcemod.net/smdrop/1.6/sourcemod-1.6.4-git4624-linux.tar.gz" -O sourcemod.tar.gz;
+          wget -q "https://bitbucket.org/rom4s/smdrop34-1.6/downloads/sourcemod-1.6.4-stable-git4626-css34-linux.tar.gz" -O sourcemod.tar.gz;
       else
           wget -q "http://www.sourcemod.net/latest.php?version=$SMVERSION&os=linux" -O sourcemod.tar.gz;
       fi'	
