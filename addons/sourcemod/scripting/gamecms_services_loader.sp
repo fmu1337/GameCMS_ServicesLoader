@@ -29,7 +29,7 @@ public Plugin:myinfo =
 	name = "GameCMS Admin Loader",
 	author = "Danyas",
 	description = "Loading admins and services from GameCMS database",
-	version = "1.6.b38",
+	version = "1.6.b39",
 	url = "https://vk.com/id36639907"
 }
 
@@ -183,9 +183,9 @@ public SQL_GetServices(Handle:owner, Handle:hndl, const String:error[], any:data
 public OnClientPostAdminCheck(client)
 {
 	if(IsFakeClient(client)) return;
-	decl String: sSteamId[21], String:query[350];
+	decl String: sSteamId[21], String:query[372];
 	GetClientAuthId(client, AuthId_Engine, sSteamId, sizeof(sSteamId));
-	FormatEx(query, 350, "SELECT `admins_services`.`service`, `admins_services`.`rights_und`, `admins`.`pass` FROM `admins_services`, `admins` WHERE `admins`.`id`=`admins_services`.`admin_id` AND `admins`.`name`='%s' AND `admins`.`server`='%i' AND (`admins_services`.`ending_date`>CURRENT_TIMESTAMP OR `admins_services`.`ending_date`='0000-00-00 00:00:00')", sSteamId, g_iServerId);
+	FormatEx(query, 372, "SELECT `admins__services`.`service`, `admins__services`.`rights_und`, `admins`.`pass` FROM `admins__services`, `admins` WHERE `admins`.`id`=`admins__services`.`admin_id` AND `admins`.`name`='%s' AND `admins`.`server`='%i' AND (`admins__services`.`ending_date`>CURRENT_TIMESTAMP OR `admins__services`.`ending_date`='0000-00-00 00:00:00')", sSteamId, g_iServerId);
 	if(g_iLoggin & LOGCONNECTS) LogToFileEx(sLog, "Игрок %N (%s) подключен.", client, sSteamId);	
 	if(g_iLoggin & LOGDB) LogToFileEx(sLog, "OnClientPostAdminCheck: \"%s\"", query);
 	SQL_TQuery(g_hDatabase, SQL_Callback, query, client)

@@ -5,6 +5,7 @@ env:
     - SMVERSION=1.7
     - SMVERSION=1.8
     - SMVERSION=1.9
+    - SMVERSION=1.10
 
 matrix:
     fast_finish: true
@@ -12,6 +13,7 @@ matrix:
     - env: SMVERSION=1.7
     - env: SMVERSION=1.8
     - env: SMVERSION=1.9
+    - env: SMVERSION=1.10
 
 before_install:
     - sudo apt-get update
@@ -20,7 +22,7 @@ before_install:
 
 before_script:
     - 'if [ $SMVERSION = "1.6" ]; then
-          wget -q "https://bitbucket.org/rom4s/smdrop34-1.6/downloads/sourcemod-1.6.4-stable-git4626-css34-linux.tar.gz" -O sourcemod.tar.gz;
+          wget -q "https://bitbucket.org/_4/smdrop-1.6/downloads/sourcemod-1.6.4-stable-git4626-css34-linux.tar.gz" -O sourcemod.tar.gz;
       else
           wget -q "http://www.sourcemod.net/latest.php?version=$SMVERSION&os=linux" -O sourcemod.tar.gz;
       fi'	
