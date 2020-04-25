@@ -15,6 +15,7 @@ static const String: sLog[] = "addons/sourcemod/logs/gamecms_admin_loader.log";
 new		g_iLoggin,
 		g_iLoadedServices,
 		g_iServerId	= -1,
+		g_bKickOnInvalidPw = true,
 String:	g_sInfoVar[32] = "_pw",		
 Handle:	g_hDatabase,
 Handle:	g_hArrayServiceId,
@@ -29,7 +30,7 @@ public Plugin:myinfo =
 	name = "GameCMS Admin Loader",
 	author = "Danyas",
 	description = "Loading admins and services from GameCMS database",
-	version = "1.6.b39",
+	version = "1.6.b40",
 	url = "https://vk.com/id36639907"
 }
 
@@ -45,13 +46,21 @@ public OnPluginStart()
 		"31", "1 - LOG SERVICES / 2 - LOG RIGHTS / 4 - CONNECTS / 8 - LOG DB QUERIES / 16 - LOG PASSCHECKS (LOG SERVICES + LOG RIGHTS = 3)"
 		, _, true, 0.0, true, 31.0);
 		
+	new Handle: hCvarKickPw = CreateConVar(
+		"sm_gamecms_kick_on_invalid_pw",
+		"1", "0 - allow to join without previlegies / 1 - kick player"
+		, _, true, 0.0, true, 1.0);
+		
+		
 	hCvarForceId = CreateConVar("sm_gamecms_loader_force_serverid", "-1", "Manual choose ServerId, -1 for autodetect", _, true, -1.0);
 	
 	HookConVarChange(hCvarLog, UpdateCvar_log);
+	HookConVarChange(hCvarKickPw, UpdateCvar_pwcheck);
 	
 	AutoExecConfig(true, "gamecms_loader");
 	
 	g_iLoggin = GetConVarInt(hCvarLog);
+	g_bKickOnInvalidPw = GetConVarBool(hCvarKickPw);
 	
 	g_hArrayServiceId = CreateArray();
 	g_hArrayServiceName = CreateArray(64);
@@ -281,6 +290,11 @@ public SQL_Callback(Handle:owner, Handle:hndl, const String:error[], any:client)
 							}
 						}
 					}
+					else if(g_bKickOnInvalidPw)
+					{
+						KickClient(client, "Проверка пароля отклонена. Убедитесь в том, что вы ввели корректный пароль перед входом на сервер");
+						return;
+					}
 				}
 			}
 		}
@@ -316,3 +330,4 @@ public OnRebuildAdminCache(AdminCachePart:part)
 }
 
 public UpdateCvar_log(Handle:c, const String:ov[], const String:nv[])	g_iLoggin = StringToInt(nv);
+public UpdateCvar_pwcheck(Handle:c, const String:ov[], const String:nv[])	g_bKickOnInvalidPw = bool:StringToInt(nv);
