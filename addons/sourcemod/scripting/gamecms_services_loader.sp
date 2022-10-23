@@ -16,6 +16,7 @@ new		g_iLoggin,
 		g_iLoadedServices,
 		g_iServerId	= -1,
 		g_bKickOnInvalidPw = true,
+Float:  g_fTimerTime,
 String:	g_sInfoVar[32] = "_pw",		
 Handle:	g_hDatabase,
 Handle:	g_hArrayServiceId,
@@ -30,7 +31,7 @@ public Plugin:myinfo =
 	name = "GameCMS Admin Loader",
 	author = "Danyas",
 	description = "Loading admins and services from GameCMS database",
-	version = "1.6.b40",
+	version = "1.7 beta untested",
 	url = "https://vk.com/id36639907"
 }
 
@@ -52,14 +53,22 @@ public OnPluginStart()
 		, _, true, 0.0, true, 1.0);
 		
 		
+	new Handle: hCvarTimerCheck = CreateConVar(
+		"sm_gamecms_checkrights_timer",
+		"120.0", "Time between previlegies check"
+		, _, true, 1.0, true, 3600.0);
+		
+		
 	hCvarForceId = CreateConVar("sm_gamecms_loader_force_serverid", "-1", "Manual choose ServerId, -1 for autodetect", _, true, -1.0);
 	
 	HookConVarChange(hCvarLog, UpdateCvar_log);
+	HookConVarChange(hCvarTimerCheck, UpdateCvar_Timer);
 	HookConVarChange(hCvarKickPw, UpdateCvar_pwcheck);
 	
 	AutoExecConfig(true, "gamecms_loader");
 	
 	g_iLoggin = GetConVarInt(hCvarLog);
+	g_fTimerTime = GetConVarFloat(hCvarTimerCheck);
 	g_bKickOnInvalidPw = GetConVarBool(hCvarKickPw);
 	
 	g_hArrayServiceId = CreateArray();
@@ -317,7 +326,19 @@ public SQL_Callback(Handle:owner, Handle:hndl, const String:error[], any:client)
 		
 		if(g_iLoggin & LOGRIGHTS && c != 0) LogToFileEx(sLog, "Игроку %N выданы флаги: \"%s\" и установлен иммунитет \"%i\"", client, sFlags, iImmunity < MaxImmunity ? MaxImmunity : iImmunity);
 	}
+	CreateTimer(g_fTimerTime, Timer_Recheck, GetClientUserId(client));
 }
+
+public Action:Timer_Recheck (Handle:timer, userid)
+{
+	new client = GetClientOfUserId(userid);
+	if(client > 0 && IsClientInGame(client))
+	{
+		OnClientPostAdminCheck(client);
+	}
+	return Plugin_Continue;
+}
+
 
 public OnRebuildAdminCache(AdminCachePart:part)
 {
@@ -330,4 +351,5 @@ public OnRebuildAdminCache(AdminCachePart:part)
 }
 
 public UpdateCvar_log(Handle:c, const String:ov[], const String:nv[])	g_iLoggin = StringToInt(nv);
+public UpdateCvar_Timer(Handle:c, const String:ov[], const String:nv[])	g_fTimerTime = StringToFloat(nv);
 public UpdateCvar_pwcheck(Handle:c, const String:ov[], const String:nv[])	g_bKickOnInvalidPw = bool:StringToInt(nv);
